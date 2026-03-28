@@ -1,0 +1,9 @@
+CREATE TABLE Users (
+    userid SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    passwordHash VARCHAR(255) NOT NULL,
+    savedPassword VARCHAR(255),
+    currency VARCHAR(10),
+    createdAt TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
