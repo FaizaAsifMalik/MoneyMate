@@ -91,3 +91,55 @@ CREATE TABLE IF NOT EXISTS AI_Insights (
     content TEXT NOT NULL,
     generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS Chart (
+    chart_id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    chart_type VARCHAR(50) NOT NULL,          -- 'bar', 'line', 'pie'
+    metric VARCHAR(50) NOT NULL,              -- 'expense', 'income', 'cashflow', 'goal'
+    category_id INT,
+    data_range_start_date DATE NOT NULL,
+    data_range_end_date DATE NOT NULL,
+    generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS BudgetPrediction (
+    prediction_id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    category_id INT NOT NULL,
+    predicted_amount NUMERIC(10, 2) NOT NULL,
+    confidence NUMERIC(5, 2) NOT NULL,           -- e.g., 87.50 for 87.5%
+    based_on_months INT NOT NULL,                -- how many months of data used
+    predicted_for DATE NOT NULL,                 -- month/year for which prediction is made
+    generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS AI_Suggestion (
+    suggestion_id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL,                   -- 'saving', 'budgeting', 'investment'
+    content TEXT NOT NULL,
+    priority INT DEFAULT 0,                       -- 1 = high, 2 = medium, 3 = low
+    is_read BOOLEAN DEFAULT FALSE,
+    based_on_history_from DATE,                  -- optional start date for historical data used
+    generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS BudgetStrategy (
+    strategy_id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    strategy_type VARCHAR(50) NOT NULL,     --'saving plan', 'spending limit', 'investment plan'
+    custom_rules TEXT,                       -- any custom rules or notes
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS TrendAnalysis (
+    trend_id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    category_id INT NOT NULL,
+    period VARCHAR(50) NOT NULL,                 --'weekly', 'monthly'
+    percentage_change NUMERIC(6,2) NOT NULL,    -- 12.50 for +12.5%
+    direction VARCHAR(10) NOT NULL,             -- 'up' or 'down'
+    compared VARCHAR(50) NOT NULL,              -- what it's compared against ('last month', 'last year')
+    generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
