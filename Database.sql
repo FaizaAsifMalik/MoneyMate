@@ -143,3 +143,120 @@ CREATE TABLE IF NOT EXISTS TrendAnalysis (
     compared VARCHAR(50) NOT NULL,              -- what it's compared against ('last month', 'last year')
     generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+--Foreign keys:
+-- Income → Users
+ALTER TABLE Income
+ADD CONSTRAINT fk_income_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Category → Users
+ALTER TABLE Category
+ADD CONSTRAINT fk_category_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Expense → Users
+ALTER TABLE Expense
+ADD CONSTRAINT fk_expense_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Expense → Category
+ALTER TABLE Expense
+ADD CONSTRAINT fk_expense_category
+FOREIGN KEY (category_id) REFERENCES Category(category_id);
+
+-- Budget → Users
+ALTER TABLE Budget
+ADD CONSTRAINT fk_budget_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Budget → Category
+ALTER TABLE Budget
+ADD CONSTRAINT fk_budget_category
+FOREIGN KEY (category_id) REFERENCES Category(category_id);
+
+-- Goal → Users
+ALTER TABLE Goal
+ADD CONSTRAINT fk_goal_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Emails → Users
+ALTER TABLE Emails
+ADD CONSTRAINT fk_email_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Bills → Users
+ALTER TABLE Bills
+ADD CONSTRAINT fk_bills_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Bills → Category
+ALTER TABLE Bills
+ADD CONSTRAINT fk_bills_category
+FOREIGN KEY (category_id) REFERENCES Category(category_id);
+
+-- Notifications → Users
+ALTER TABLE Notifications
+ADD CONSTRAINT fk_notifications_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- AI_Insights → Users
+ALTER TABLE AI_Insights
+ADD CONSTRAINT fk_ai_insights_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Chart → Users
+ALTER TABLE Chart
+ADD CONSTRAINT fk_chart_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- Chart → Category
+ALTER TABLE Chart
+ADD CONSTRAINT fk_chart_category
+FOREIGN KEY (category_id) REFERENCES Category(category_id);
+
+-- BudgetPrediction → Users
+ALTER TABLE BudgetPrediction
+ADD CONSTRAINT fk_budgetprediction_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- BudgetPrediction → Category
+ALTER TABLE BudgetPrediction
+ADD CONSTRAINT fk_budgetprediction_category
+FOREIGN KEY (category_id) REFERENCES Category(category_id);
+
+-- AI_Suggestion → Users
+ALTER TABLE AI_Suggestion
+ADD CONSTRAINT fk_ai_suggestion_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- BudgetStrategy → Users
+ALTER TABLE BudgetStrategy
+ADD CONSTRAINT fk_budgetstrategy_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- TrendAnalysis → Users
+ALTER TABLE TrendAnalysis
+ADD CONSTRAINT fk_trendanalysis_user
+FOREIGN KEY (user_id) REFERENCES Users(userid);
+
+-- TrendAnalysis → Category
+ALTER TABLE TrendAnalysis
+ADD CONSTRAINT fk_trendanalysis_category
+FOREIGN KEY (category_id) REFERENCES Category(category_id);
+
+--Unique Constraint:
+-- Category: a user shouldn’t have two categories with the same name
+ALTER TABLE Category
+ADD CONSTRAINT unique_user_category_name UNIQUE (user_id, name);
+
+-- Budget: a user can’t have two budgets for the same category and period
+ALTER TABLE Budget
+ADD CONSTRAINT unique_user_budget_category_period UNIQUE (user_id, category_id, period);
+
+-- Goal: a user shouldn’t have two goals with the same title
+ALTER TABLE Goal
+ADD CONSTRAINT unique_user_goal_title UNIQUE (user_id, title);
+
+-- Chart: a user shouldn’t generate duplicate charts for the same type, metric, and category over the same date range
+ALTER TABLE Chart
+ADD CONSTRAINT unique_user_chart UNIQUE (user_id, chart_type, metric, category_id, data_range_start_date, data_range_end_date);
