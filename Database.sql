@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS Users (
 CREATE TABLE IF NOT EXISTS Income (
     income_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
     source VARCHAR(100) NOT NULL,
     date DATE NOT NULL,
     note TEXT
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS Category (
     category_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
-    type VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('income','expense')),
     icon VARCHAR(100),
     colour VARCHAR(20)
 );
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS Expense (
     expense_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     category_id INT NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
     date DATE NOT NULL,
     description TEXT,
     bill_id INT
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS Budget (
     budget_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     category_id INT NOT NULL,
-    limit_amount NUMERIC(10, 2) NOT NULL,
-    period VARCHAR(20) NOT NULL,       --'weekly', 'monthly', 'custom'
+    limit_amount NUMERIC(10, 2) NOT NULL CHECK (limit_amount >= 0),
+    period VARCHAR(20) NOT NULL CHECK (period IN ('weekly','monthly','custom')), 
     start_date DATE NOT NULL,
     end_date DATE NOT NULL
 );
@@ -49,10 +49,10 @@ CREATE TABLE IF NOT EXISTS Goal (
     goal_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     title VARCHAR(100) NOT NULL,
-    target_amount NUMERIC(10, 2) NOT NULL,
-    saved_amount NUMERIC(10, 2) DEFAULT 0,
+    target_amount NUMERIC(10, 2) NOT NULL CHECK (target_amount >= 0),
+    saved_amount NUMERIC(10, 2) DEFAULT 0 CHECK (saved_amount >= 0),
     deadline DATE NOT NULL,
-    status VARCHAR(20) DEFAULT 'in progress'  --'in progress', 'completed', 'failed'
+    status VARCHAR(20) DEFAULT 'in progress' CHECK (status IN ('in progress','completed','failed'))
 );
 
 CREATE TABLE IF NOT EXISTS Emails (
@@ -68,9 +68,9 @@ CREATE TABLE IF NOT EXISTS Bills (
     bill_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
-    amount NUMERIC(10, 2) NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
     due_date DATE NOT NULL,
-    recurrence VARCHAR(50) DEFAULT 'none', --'monthly', 'weekly', 'none'
+    recurrence VARCHAR(50) DEFAULT 'none' CHECK (recurrence IN ('none','weekly','monthly')),
     is_paid BOOLEAN DEFAULT FALSE,
     category_id INT
 );
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS Notifications (
     notification_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     message TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL,         --'reminder', 'alert', 'info'
+    type VARCHAR(50) NOT NULL CHECK (type IN ('reminder','alert','info')),
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS Notifications (
 CREATE TABLE IF NOT EXISTS AI_Insights (
     insight_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
-    type VARCHAR(50) NOT NULL,           --'suggestion', 'prediction', 'trend'
+    type VARCHAR(50) NOT NULL CHECK (type IN ('suggestion','prediction','trend')),
     content TEXT NOT NULL,
     generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -95,8 +95,8 @@ CREATE TABLE IF NOT EXISTS AI_Insights (
 CREATE TABLE IF NOT EXISTS Chart (
     chart_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
-    chart_type VARCHAR(50) NOT NULL,          -- 'bar', 'line', 'pie'
-    metric VARCHAR(50) NOT NULL,              -- 'expense', 'income', 'cashflow', 'goal'
+    chart_type VARCHAR(50) NOT NULL CHECK (chart_type IN ('bar','line','pie')),
+    metric VARCHAR(50) NOT NULL CHECK (metric IN ('expense','income','cashflow','goal')),
     category_id INT,
     data_range_start_date DATE NOT NULL,
     data_range_end_date DATE NOT NULL,
@@ -107,9 +107,9 @@ CREATE TABLE IF NOT EXISTS BudgetPrediction (
     prediction_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     category_id INT NOT NULL,
-    predicted_amount NUMERIC(10, 2) NOT NULL,
-    confidence NUMERIC(5, 2) NOT NULL,           -- e.g., 87.50 for 87.5%
-    based_on_months INT NOT NULL,                -- how many months of data used
+    predicted_amount NUMERIC(10, 2) NOT NULL CHECK (predicted_amount >= 0),
+    confidence NUMERIC(5, 2) NOT NULL CHECK (confidence >= 0 AND confidence <= 100),     -- e.g., 87.50 for 87.5%
+    based_on_months INT NOT NULL CHECK (based_on_months > 0),   -- how many months of data used
     predicted_for DATE NOT NULL,                 -- month/year for which prediction is made
     generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -117,11 +117,11 @@ CREATE TABLE IF NOT EXISTS BudgetPrediction (
 CREATE TABLE IF NOT EXISTS AI_Suggestion (
     suggestion_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
-    type VARCHAR(50) NOT NULL,                   -- 'saving', 'budgeting', 'investment'
+    type VARCHAR(50) NOT NULL CHECK (type IN ('saving','budgeting','investment')),
     content TEXT NOT NULL,
-    priority INT DEFAULT 0,                       -- 1 = high, 2 = medium, 3 = low
+    priority INT DEFAULT 2 CHECK (priority IN (1,2,3)),
     is_read BOOLEAN DEFAULT FALSE,
-    based_on_history_from DATE,                  -- optional start date for historical data used
+    based_on_history_from DATE,          -- optional start date for historical data used
     generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -137,112 +137,117 @@ CREATE TABLE IF NOT EXISTS TrendAnalysis (
     trend_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     category_id INT NOT NULL,
-    period VARCHAR(50) NOT NULL,                 --'weekly', 'monthly'
+    period VARCHAR(50) NOT NULL CHECK (period IN ('weekly','monthly','yearly')),
     percentage_change NUMERIC(6,2) NOT NULL,    -- 12.50 for +12.5%
-    direction VARCHAR(10) NOT NULL,             -- 'up' or 'down'
+    direction VARCHAR(10) NOT NULL CHECK (direction IN ('up','down')),
     compared VARCHAR(50) NOT NULL,              -- what it's compared against ('last month', 'last year')
     generated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --Foreign keys:
--- Income → Users
+-- Income -> Users
 ALTER TABLE Income
 ADD CONSTRAINT fk_income_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- Category → Users
+-- Category -> Users
 ALTER TABLE Category
 ADD CONSTRAINT fk_category_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- Expense → Users
+-- Expense -> Users
 ALTER TABLE Expense
 ADD CONSTRAINT fk_expense_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- Expense → Category
+-- Expense -> Category
 ALTER TABLE Expense
 ADD CONSTRAINT fk_expense_category
-FOREIGN KEY (category_id) REFERENCES Category(category_id);
+FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
 
--- Budget → Users
+-- Budget -> Users
 ALTER TABLE Budget
 ADD CONSTRAINT fk_budget_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- Budget → Category
+-- Budget -> Category
 ALTER TABLE Budget
 ADD CONSTRAINT fk_budget_category
-FOREIGN KEY (category_id) REFERENCES Category(category_id);
+FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
 
--- Goal → Users
+-- Goal -> Users
 ALTER TABLE Goal
 ADD CONSTRAINT fk_goal_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- Emails → Users
+-- Emails -> Users
 ALTER TABLE Emails
 ADD CONSTRAINT fk_email_user
 FOREIGN KEY (user_id) REFERENCES Users(userid);
 
--- Bills → Users
+-- Bills -> Users
 ALTER TABLE Bills
 ADD CONSTRAINT fk_bills_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- Bills → Category
+-- Bills -> Category
 ALTER TABLE Bills
 ADD CONSTRAINT fk_bills_category
-FOREIGN KEY (category_id) REFERENCES Category(category_id);
+FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE SET NULL;
 
--- Notifications → Users
+-- Notifications -> Users
 ALTER TABLE Notifications
 ADD CONSTRAINT fk_notifications_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- AI_Insights → Users
+-- AI_Insights -> Users
 ALTER TABLE AI_Insights
 ADD CONSTRAINT fk_ai_insights_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- Chart → Users
+-- Chart -> Users
 ALTER TABLE Chart
 ADD CONSTRAINT fk_chart_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- Chart → Category
+-- Chart -> Category
 ALTER TABLE Chart
 ADD CONSTRAINT fk_chart_category
-FOREIGN KEY (category_id) REFERENCES Category(category_id);
+FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE SET NULL;
 
--- BudgetPrediction → Users
+-- BudgetPrediction -> Users
 ALTER TABLE BudgetPrediction
 ADD CONSTRAINT fk_budgetprediction_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- BudgetPrediction → Category
+-- BudgetPrediction -> Category
 ALTER TABLE BudgetPrediction
 ADD CONSTRAINT fk_budgetprediction_category
-FOREIGN KEY (category_id) REFERENCES Category(category_id);
+FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
 
--- AI_Suggestion → Users
+-- AI_Suggestion -> Users
 ALTER TABLE AI_Suggestion
 ADD CONSTRAINT fk_ai_suggestion_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- BudgetStrategy → Users
+-- BudgetStrategy -> Users
 ALTER TABLE BudgetStrategy
 ADD CONSTRAINT fk_budgetstrategy_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- TrendAnalysis → Users
+-- TrendAnalysis -> Users
 ALTER TABLE TrendAnalysis
 ADD CONSTRAINT fk_trendanalysis_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
--- TrendAnalysis → Category
+-- TrendAnalysis -> Category
 ALTER TABLE TrendAnalysis
 ADD CONSTRAINT fk_trendanalysis_category
-FOREIGN KEY (category_id) REFERENCES Category(category_id);
+FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
+
+--Expense ->Bills
+ALTER TABLE Expense
+ADD CONSTRAINT fk_expense_bill
+FOREIGN KEY (bill_id) REFERENCES Bills(bill_id) ON DELETE SET NULL;
 
 --Unique Constraint:
 -- Category: a user shouldn’t have two categories with the same name
