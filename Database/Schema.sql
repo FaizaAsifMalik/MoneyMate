@@ -265,3 +265,28 @@ ADD CONSTRAINT unique_user_goal_title UNIQUE (user_id, title);
 -- Chart: a user shouldn’t generate duplicate charts for the same type, metric, and category over the same date range
 ALTER TABLE Chart
 ADD CONSTRAINT unique_user_chart UNIQUE (user_id, chart_type, metric, category_id, data_range_start_date, data_range_end_date);
+
+--Check Contraint:
+--Income
+ALTER TABLE Income
+ADD CONSTRAINT chk_income_amount_positive
+CHECK (amount > 0);
+
+--Expense
+ALTER TABLE Expense
+ADD CONSTRAINT chk_expense_amount_positive
+CHECK (amount > 0);
+
+--Budget
+ALTER TABLE Budget
+ADD CONSTRAINT chk_budget_limit_positive
+CHECK (limit_amount > 0);
+
+--Goal
+ALTER TABLE Goal
+ADD CONSTRAINT chk_goal_target_positive
+CHECK (target_amount > 0);
+
+ALTER TABLE Goal
+ADD CONSTRAINT chk_goal_saved_non_negative
+CHECK (saved_amount >= 0 AND saved_amount <= target_amount);
