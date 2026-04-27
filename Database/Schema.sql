@@ -290,3 +290,55 @@ CHECK (target_amount > 0);
 ALTER TABLE Goal
 ADD CONSTRAINT chk_goal_saved_non_negative
 CHECK (saved_amount >= 0 AND saved_amount <= target_amount);
+
+--Indexing:
+--Users:
+CREATE UNIQUE INDEX idx_users_email ON Users(email);
+
+--Expense:
+CREATE INDEX idx_expense_user_date 
+ON Expense(user_id, date);
+
+CREATE INDEX idx_expense_category 
+ON Expense(category_id);
+
+--Income:
+CREATE INDEX idx_income_user_date 
+ON Income(user_id, date);
+
+--Category:
+CREATE INDEX idx_category_user 
+ON Category(user_id);
+
+--Budget:
+CREATE INDEX idx_budget_user_category 
+ON Budget(user_id, category_id);
+
+--Bills:
+CREATE INDEX idx_bills_user 
+ON Bills(user_id);
+
+CREATE INDEX idx_bills_due_date 
+ON Bills(due_date);
+
+--Notifications:
+CREATE INDEX idx_notifications_user_read 
+ON Notifications(user_id, is_read);
+
+--Goals:
+CREATE INDEX idx_goal_user 
+ON Goal(user_id);
+
+--AI:
+CREATE INDEX idx_ai_insights_user 
+ON AI_Insights(user_id);
+
+CREATE INDEX idx_ai_suggestion_user 
+ON AI_Suggestion(user_id);
+
+--Charts and trends:
+CREATE INDEX idx_trend_user_category 
+ON TrendAnalysis(user_id, category_id);
+
+CREATE INDEX idx_chart_user 
+ON Chart(user_id);
