@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS Users (
-    userid SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     passwordHash VARCHAR(255) NOT NULL,
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS TrendAnalysis (
 -- Income -> Users
 ALTER TABLE Income
 ADD CONSTRAINT fk_income_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 --Income-> Category
 ALTER TABLE Income
@@ -158,12 +158,12 @@ FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
 -- Category -> Users
 ALTER TABLE Category
 ADD CONSTRAINT fk_category_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- Expense -> Users
 ALTER TABLE Expense
 ADD CONSTRAINT fk_expense_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- Expense -> Category
 ALTER TABLE Expense
@@ -173,7 +173,7 @@ FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
 -- Budget -> Users
 ALTER TABLE Budget
 ADD CONSTRAINT fk_budget_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- Budget -> Category
 ALTER TABLE Budget
@@ -183,17 +183,17 @@ FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
 -- Goal -> Users
 ALTER TABLE Goal
 ADD CONSTRAINT fk_goal_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- Emails -> Users
 ALTER TABLE Emails
 ADD CONSTRAINT fk_email_user
-FOREIGN KEY (user_id) REFERENCES Users(userid);
+FOREIGN KEY (user_id) REFERENCES Users(id);
 
 -- Bills -> Users
 ALTER TABLE Bills
 ADD CONSTRAINT fk_bills_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- Bills -> Category
 ALTER TABLE Bills
@@ -203,17 +203,17 @@ FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE SET NULL;
 -- Notifications -> Users
 ALTER TABLE Notifications
 ADD CONSTRAINT fk_notifications_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- AI_Insights -> Users
 ALTER TABLE AI_Insights
 ADD CONSTRAINT fk_ai_insights_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- Chart -> Users
 ALTER TABLE Chart
 ADD CONSTRAINT fk_chart_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- Chart -> Category
 ALTER TABLE Chart
@@ -223,7 +223,7 @@ FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE SET NULL;
 -- BudgetPrediction -> Users
 ALTER TABLE BudgetPrediction
 ADD CONSTRAINT fk_budgetprediction_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- BudgetPrediction -> Category
 ALTER TABLE BudgetPrediction
@@ -233,17 +233,17 @@ FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
 -- AI_Suggestion -> Users
 ALTER TABLE AI_Suggestion
 ADD CONSTRAINT fk_ai_suggestion_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- BudgetStrategy -> Users
 ALTER TABLE BudgetStrategy
 ADD CONSTRAINT fk_budgetstrategy_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- TrendAnalysis -> Users
 ALTER TABLE TrendAnalysis
 ADD CONSTRAINT fk_trendanalysis_user
-FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
+FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE;
 
 -- TrendAnalysis -> Category
 ALTER TABLE TrendAnalysis
