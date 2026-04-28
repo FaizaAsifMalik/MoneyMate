@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS Users (
 CREATE TABLE IF NOT EXISTS Income (
     income_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
+    category_id INT NOT NULL,
     amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
     source VARCHAR(100) NOT NULL,
     date DATE NOT NULL,
@@ -149,6 +150,11 @@ ALTER TABLE Income
 ADD CONSTRAINT fk_income_user
 FOREIGN KEY (user_id) REFERENCES Users(userid) ON DELETE CASCADE;
 
+--Income-> Category
+ALTER TABLE Income
+ADD CONSTRAINT fk_category_income
+FOREIGN KEY (category_id) REFERENCES Category(category_id) ON DELETE CASCADE;
+
 -- Category -> Users
 ALTER TABLE Category
 ADD CONSTRAINT fk_category_user
@@ -266,31 +272,6 @@ ADD CONSTRAINT unique_user_goal_title UNIQUE (user_id, title);
 ALTER TABLE Chart
 ADD CONSTRAINT unique_user_chart UNIQUE (user_id, chart_type, metric, category_id, data_range_start_date, data_range_end_date);
 
---Check Contraint:
---Income
-ALTER TABLE Income
-ADD CONSTRAINT chk_income_amount_positive
-CHECK (amount > 0);
-
---Expense
-ALTER TABLE Expense
-ADD CONSTRAINT chk_expense_amount_positive
-CHECK (amount > 0);
-
---Budget
-ALTER TABLE Budget
-ADD CONSTRAINT chk_budget_limit_positive
-CHECK (limit_amount > 0);
-
---Goal
-ALTER TABLE Goal
-ADD CONSTRAINT chk_goal_target_positive
-CHECK (target_amount > 0);
-
-ALTER TABLE Goal
-ADD CONSTRAINT chk_goal_saved_non_negative
-CHECK (saved_amount >= 0 AND saved_amount <= target_amount);
-
 --Indexing:
 --Users:
 CREATE UNIQUE INDEX idx_users_email ON Users(email);
@@ -305,6 +286,9 @@ ON Expense(category_id);
 --Income:
 CREATE INDEX idx_income_user_date 
 ON Income(user_id, date);
+
+CREATE INDEX idx_income_category 
+ON Income(category_id);
 
 --Category:
 CREATE INDEX idx_category_user 
