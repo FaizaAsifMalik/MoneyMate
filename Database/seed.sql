@@ -95,58 +95,5 @@ VALUES
 (1, 2, 'monthly', 12.50, 'up', 'last month'),
 (2, 5, 'weekly', 8.00, 'down', 'last week');
 
---Testing simple queries:
-SELECT * FROM Expense WHERE user_id = 1;
-
-SELECT SUM(amount)
-FROM Expense
-WHERE user_id = 1
-AND date BETWEEN '2026-04-01' AND '2026-04-30';
-
-SELECT e.amount, c.name
-FROM Expense e
-JOIN Category c ON e.category_id = c.category_id
-WHERE e.user_id = 1;
-
-SELECT
-    u.userid,
-    u.name,
-    e.expense_id,
-    e.amount,
-    e.date
-FROM Users u
-LEFT JOIN Expense e
-ON u.userid = e.user_id
-ORDER BY u.userid;
-
---testing constraint:
-INSERT INTO Category (user_id, name, type)
-VALUES (1, 'Food', 'expense'); --gives error: database unique constraints are working
-INSERT INTO Expense (user_id, category_id, amount, date)
-VALUES (1, 2, -500, '2026-04-10'); --should give error but didnt so check contraint applied at areas where needed
---ran it again and now gives error: fixed the areas
-INSERT INTO Expense (user_id, category_id, amount, date)
-VALUES (999, 2, 1000, '2026-04-10'); --failed because user doesnt exist. Tested foreign key constraint here
-
---Nested queries:
-SELECT *
-FROM Expense
-WHERE amount > (
-    SELECT AVG(amount)
-    FROM Expense
-);
-
-SELECT DISTINCT u.userid, u.name
-FROM Users u
-JOIN Expense e ON u.userid = e.user_id
-WHERE e.amount > (
-    SELECT AVG(amount) FROM Expense
-);
-
-SELECT e1.*
-FROM Expense e1
-WHERE e1.amount > (
-    SELECT AVG(e2.amount)
-    FROM Expense e2
-    WHERE e2.category_id = e1.category_id
+ry_id
 );
