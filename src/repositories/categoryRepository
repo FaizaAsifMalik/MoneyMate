@@ -1,0 +1,59 @@
+const { query } = require('../config/database');
+
+/**
+ * Category Repository
+ */
+module.exports = {
+  /**
+   * Find one category by filters (user_id, category_id, type, etc.)
+   */
+  findOne: async (filters) => {
+    const keys = Object.keys(filters);
+
+    if (keys.length === 0) return null;
+
+    const values = Object.values(filters);
+
+    const conditions = keys
+      .map((key, index) => `c.${key} = $${index + 1}`)
+      .join(' AND ');
+
+    const result = await query(
+      `SELECT c.*
+       FROM category c
+       WHERE ${conditions}`,
+      values
+    );
+
+    return result.rows[0];
+  },
+
+  /**
+   * Find category by ID
+   */
+  findById: async (categoryId, userId) => {
+    const result = await query(
+      `SELECT * FROM category
+       WHERE category_id = $1 AND user_id = $2`,
+      [categoryId, userId]
+    );
+
+    return result.rows[0];
+  },
+
+  /**
+   * Get all categories for a user
+   */
+  findAll: async (userId, type = null) => {
+    let sql = `SELECT * FROM category WHERE user_id = $1`;
+    const params = [userId];
+
+    if (type) {
+      sql += ` AND type = $2`;
+      params.push(type);
+    }
+
+    const result = await query(sql, params);
+    return result.rows;
+  },
+};
