@@ -1,45 +1,45 @@
-require("dotenv").config();
+const app = require('./src/app');
+const { config } = require('./src/config/env');
+const { checkDatabaseConnection } = require('./src/config/connection_check');
+const logger = require('./src/utils/logger');
+const { initializeJobs } = require('./src/jobs');
 
-const app = require("./src/config/app");
-const sequelize = require("./src/config/database");
-const connectDB = require("./src/config/connection-check");
+const PORT = config.port;
 
-// Routes
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
+// Check database connection before starting server
+async function startServer() {
+  try {
+    // Test database connection
+    await checkDatabaseConnection();
+    logger.info('✅ Database connection established successfully');
 
-const appInstance = express();
+    // Initialize scheduled jobs
+    initializeJobs();
+    logger.info('✅ Scheduled jobs initialized');
 
-//middleware
-appInstance.use(cors());
-appInstance.use(helmet());
-appInstance.use(express.json());
-appInstance.use(express.urlencoded({ extended: true }));
-appInstance.use(morgan("dev"));
+    // Start the server
+    app.listen(PORT, () => {
+      logger.info(`🚀 MoneyMate server running on port ${PORT}`);
+      logger.info(`📊 Environment: ${config.nodeEnv}`);
+      logger.info(`🔗 API URL: http://localhost:${PORT}/api`);
+    });
+  } catch (error) {
+    logger.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
 
-//test route
-appInstance.get("/", (req, res) => {
-  res.json({
-    message: "MoneyMate Backend is Running 🚀"
-  });
+// Handle unhandled rejections
+process.on('unhandledRejection', (err) => {
+  logger.error('Unhandled Rejection:', err);
+  process.exit(1);
 });
 
-const startServer = async () => {
-  try {
-    await connectDB(); // check DB connection
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception:', err);
+  process.exit(1);
+});
 
-    await sequelize.sync(); // sync models with DB (development)
-
-    const PORT = process.env.PORT || app.port || 5000;
-
-    appInstance.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  } catch (err) {
-    console.error("Server failed to start:", err.message);
-  }
-};
-
+// Start the server
 startServer();
