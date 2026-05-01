@@ -1,4 +1,4 @@
-const app = require('./src/app');
+const app = require('./src/config/app');
 const { config } = require('./src/config/env');
 const { checkDatabaseConnection } = require('./src/config/connection_check');
 const logger = require('./src/utils/logger');
