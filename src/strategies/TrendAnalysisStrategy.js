@@ -1,72 +1,45 @@
-const AIStrategy = require('./AIStrategy');
+const IAnalysisStrategy = require('./interfaces/IAnalysisStrategy');
 
-/**
- * Trend Analysis Strategy
- * Concrete implementation of AI Strategy
- */
-class TrendAnalysisStrategy extends AIStrategy {
-  async analyze(expenses) {
-    const categoriesMap = {};
+class TrendAnalysisStrategy extends IAnalysisStrategy {
+  async analyze(data) {
+    const { monthlyExpenses, monthlyIncomes } = data;
 
-    // Group by category and month
-    expenses.forEach(row => {
-      const categoryId = row.category_id;
-      if (!categoriesMap[categoryId]) {
-        categoriesMap[categoryId] = {
-          category_id: categoryId,
-          category_name: row.name,
-          monthly_data: [],
-        };
-      }
-      categoriesMap[categoryId].monthly_data.push({
-        month: row.month,
-        total: parseFloat(row.total),
-      });
-    });
-
-    // Calculate trends
-    const trends = [];
-    Object.values(categoriesMap).forEach(category => {
-      if (category.monthly_data.length >= 2) {
-        const sorted = category.monthly_data.sort(
-          (a, b) => new Date(a.month) - new Date(b.month)
-        );
-        
-        const oldest = sorted[0].total;
-        const newest = sorted[sorted.length - 1].total;
-        const percentageChange = ((newest - oldest) / oldest * 100).toFixed(2);
-        const direction = newest > oldest ? 'up' : 'down';
-
-        trends.push({
-          category_id: category.category_id,
-          category_name: category.category_name,
-          direction,
-          percentage_change: Math.abs(percentageChange),
-          trend: direction === 'up' ? 'increasing' : 'decreasing',
-        });
-      }
-    });
-
-    return trends;
-  }
-
-  async predict(data) {
-    // Simple moving average prediction
-    const amounts = data.map(row => parseFloat(row.total));
-    const average = amounts.reduce((sum, val) => sum + val, 0) / amounts.length;
-    
-    // Calculate trend
-    const firstHalf = amounts.slice(0, Math.floor(amounts.length / 2));
-    const secondHalf = amounts.slice(Math.floor(amounts.length / 2));
-    const firstAvg = firstHalf.reduce((sum, val) => sum + val, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((sum, val) => sum + val, 0) / secondHalf.length;
-    const trendFactor = secondAvg / firstAvg;
+    const expenseTrend = this._calculateTrend(monthlyExpenses);
+    const incomeTrend = this._calculateTrend(monthlyIncomes);
 
     return {
-      predicted_amount: (average * trendFactor).toFixed(2),
-      average: average.toFixed(2),
-      trend_factor: trendFactor.toFixed(2),
+      expenseTrend: expenseTrend.direction,
+      expenseChangePercent: expenseTrend.changePercent,
+      incomeTrend: incomeTrend.direction,
+      incomeChangePercent: incomeTrend.changePercent,
+      netTrend: incomeTrend.avg - expenseTrend.avg,
+      summary: this._buildSummary(expenseTrend, incomeTrend),
     };
+  }
+
+  _calculateTrend(monthlyData) {
+    if (!monthlyData || monthlyData.length < 2) {
+      return { direction: 'stable', changePercent: 0, avg: 0 };
+    }
+
+    const totals = monthlyData.map(m => parseFloat(m.total) || 0);
+    const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
+    const recent = totals[0];
+    const previous = totals[1];
+
+    const changePercent = previous > 0 ? ((recent - previous) / previous) * 100 : 0;
+    const direction = changePercent > 5 ? 'increasing' : changePercent < -5 ? 'decreasing' : 'stable';
+
+    return { direction, changePercent: parseFloat(changePercent.toFixed(2)), avg };
+  }
+
+  _buildSummary(expenseTrend, incomeTrend) {
+    const parts = [];
+    if (expenseTrend.direction === 'increasing') parts.push('Expenses are increasing');
+    if (expenseTrend.direction === 'decreasing') parts.push('Expenses are decreasing');
+    if (incomeTrend.direction === 'increasing') parts.push('income is growing');
+    if (incomeTrend.direction === 'decreasing') parts.push('income is declining');
+    return parts.length > 0 ? parts.join(', ') + '.' : 'Finances are stable.';
   }
 }
 

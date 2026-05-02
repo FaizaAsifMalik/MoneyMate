@@ -1,61 +1,16 @@
-/**
- * In-memory OTP storage
- * For production, use Redis or database
- */
-class OTPStore {
-  constructor() {
-    this.otps = new Map();
-    this.OTP_EXPIRY = 10 * 60 * 1000; // 10 minutes
-  }
+const otps = new Map();
 
-  /**
-   * Store OTP for email
-   */
-  store(email, otp) {
-    this.otps.set(email, {
-      otp,
-      expiresAt: Date.now() + this.OTP_EXPIRY,
-    });
-  }
+const set = (email, otp, expiresInMs = 10 * 60 * 1000) => {
+  otps.set(email, { otp, expiresAt: Date.now() + expiresInMs });
+};
 
-  /**
-   * Verify OTP for email
-   */
-  verify(email, otp) {
-    const stored = this.otps.get(email);
-    
-    if (!stored) {
-      return false;
-    }
+const get = (email) => {
+  const entry = otps.get(email);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { otps.delete(email); return null; }
+  return entry.otp;
+};
 
-    if (Date.now() > stored.expiresAt) {
-      this.otps.delete(email);
-      return false;
-    }
+const remove = (email) => otps.delete(email);
 
-    if (stored.otp === otp) {
-      this.otps.delete(email);
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * Clean expired OTPs
-   */
-  cleanup() {
-    const now = Date.now();
-    for (const [email, data] of this.otps.entries()) {
-      if (now > data.expiresAt) {
-        this.otps.delete(email);
-      }
-    }
-  }
-}
-
-// Cleanup every 5 minutes
-const otpStore = new OTPStore();
-setInterval(() => otpStore.cleanup(), 5 * 60 * 1000);
-
-module.exports = otpStore;
+module.exports = { set, get, remove };

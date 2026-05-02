@@ -1,73 +1,52 @@
-const { query } = require('../config/database');
+const BillRepository = require('../repositories/BillRepository');
+const CategoryRepository = require('../repositories/CategoryRepository');
 const { AppError } = require('../utils/errorHandler');
 const { formatDate } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
+/**
+ * Bill Service - Updated with Repository Pattern
+ */
 class BillService {
+  constructor(
+    billRepository = BillRepository,
+    categoryRepository = CategoryRepository
+  ) {
+    this.billRepository = billRepository;
+    this.categoryRepository = categoryRepository;
+  }
+
   /**
-   * Get all bills for user
+   * Get all bills
    */
   async getBills(userId, filters = {}) {
-    const { isPaid, upcoming } = filters;
-    
-    let queryText = `
-      SELECT b.*, c.name as category_name, c.icon, c.colour
-      FROM bills b
-      LEFT JOIN category c ON b.category_id = c.category_id
-      WHERE b.user_id = $1
-    `;
-    const values = [userId];
-    let paramCount = 2;
-
-    if (isPaid !== undefined) {
-      queryText += ` AND b.is_paid = $${paramCount++}`;
-      values.push(isPaid);
-    }
-
-    if (upcoming === true) {
-      const today = formatDate(new Date());
-      const nextMonth = formatDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
-      queryText += ` AND b.due_date >= $${paramCount++} AND b.due_date <= $${paramCount++}`;
-      values.push(today, nextMonth);
-    }
-
-    queryText += ' ORDER BY b.due_date ASC';
-
-    const result = await query(queryText, values);
+    const bills = await this.billRepository.findWithCategory(userId, filters);
 
     // Calculate days until due
-    const billsWithDays = result.rows.map((bill) => {
+    return bills.map((bill) => {
       const dueDate = new Date(bill.due_date);
       const today = new Date();
       const daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-      
+
       return {
         ...bill,
         days_until_due: daysUntilDue,
         is_overdue: daysUntilDue < 0 && !bill.is_paid,
       };
     });
-
-    return billsWithDays;
   }
 
   /**
    * Get bill by ID
    */
   async getBillById(billId, userId) {
-    const result = await query(
-      `SELECT b.*, c.name as category_name, c.icon, c.colour
-       FROM bills b
-       LEFT JOIN category c ON b.category_id = c.category_id
-       WHERE b.bill_id = $1 AND b.user_id = $2`,
-      [billId, userId]
-    );
+    const bill = await this.billRepository.findById(billId, 'bill_id');
 
-    if (result.rows.length === 0) {
+    if (!bill || bill.user_id !== userId) {
       throw new AppError('Bill not found', 404);
     }
 
-    return result.rows[0];
+    return bill;
   }
 
   /**
@@ -78,100 +57,71 @@ class BillService {
 
     // Validate category if provided
     if (categoryId) {
-      const category = await query(
-        `SELECT category_id FROM category 
-         WHERE category_id = $1 AND user_id = $2 AND type = 'expense'`,
-        [categoryId, userId]
-      );
+      const category = await this.categoryRepository.findOne({
+        category_id: categoryId,
+        user_id: userId,
+        type: 'expense',
+      });
 
-      if (category.rows.length === 0) {
+      if (!category) {
         throw new AppError('Invalid expense category', 400);
       }
     }
 
-    const result = await query(
-      `INSERT INTO bills (user_id, name, amount, due_date, recurrence, is_paid, category_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [userId, name, amount, formatDate(dueDate), recurrence, false, categoryId]
-    );
+    const bill = await this.billRepository.create({
+      user_id: userId,
+      name,
+      amount,
+      due_date: formatDate(dueDate),
+      recurrence,
+      is_paid: false,
+      category_id: categoryId,
+    });
 
     logger.info(`Bill created for user ${userId}: ${name}`);
 
-    return result.rows[0];
+    return bill;
   }
 
   /**
    * Update bill
    */
   async updateBill(billId, userId, updateData) {
-    const { name, amount, dueDate, recurrence, isPaid, categoryId } = updateData;
-    const updates = [];
-    const values = [];
-    let paramCount = 1;
+    // Verify ownership
+    await this.getBillById(billId, userId);
 
-    if (name) {
-      updates.push(`name = $${paramCount++}`);
-      values.push(name);
-    }
+    // Validate category if updating
+    if (updateData.categoryId) {
+      const category = await this.categoryRepository.findOne({
+        category_id: updateData.categoryId,
+        user_id: userId,
+        type: 'expense',
+      });
 
-    if (amount !== undefined) {
-      updates.push(`amount = $${paramCount++}`);
-      values.push(amount);
-    }
-
-    if (dueDate) {
-      updates.push(`due_date = $${paramCount++}`);
-      values.push(formatDate(dueDate));
-    }
-
-    if (recurrence) {
-      updates.push(`recurrence = $${paramCount++}`);
-      values.push(recurrence);
-    }
-
-    if (isPaid !== undefined) {
-      updates.push(`is_paid = $${paramCount++}`);
-      values.push(isPaid);
-    }
-
-    if (categoryId !== undefined) {
-      if (categoryId) {
-        const category = await query(
-          `SELECT category_id FROM category 
-           WHERE category_id = $1 AND user_id = $2 AND type = 'expense'`,
-          [categoryId, userId]
-        );
-
-        if (category.rows.length === 0) {
-          throw new AppError('Invalid expense category', 400);
-        }
+      if (!category) {
+        throw new AppError('Invalid expense category', 400);
       }
-      updates.push(`category_id = $${paramCount++}`);
-      values.push(categoryId);
+      updateData.category_id = updateData.categoryId;
+      delete updateData.categoryId;
     }
 
-    if (updates.length === 0) {
-      throw new AppError('No fields to update', 400);
+    // Format date if provided
+    if (updateData.dueDate) {
+      updateData.due_date = formatDate(updateData.dueDate);
+      delete updateData.dueDate;
     }
 
-    values.push(billId, userId);
-
-    const result = await query(
-      `UPDATE bills 
-       SET ${updates.join(', ')}
-       WHERE bill_id = $${paramCount++} AND user_id = $${paramCount}
-       RETURNING *`,
-      values
-    );
-
-    if (result.rows.length === 0) {
-      throw new AppError('Bill not found', 404);
+    // Map camelCase to snake_case
+    if (updateData.isPaid !== undefined) {
+      updateData.is_paid = updateData.isPaid;
+      delete updateData.isPaid;
     }
+
+    const bill = await this.billRepository.update(billId, updateData, 'bill_id');
 
     logger.info(`Bill updated: ${billId}`);
 
-    return result.rows[0];
+    return bill;
   }
 
   /**
@@ -184,15 +134,12 @@ class BillService {
       throw new AppError('Bill is already marked as paid', 400);
     }
 
-    // Update bill status
-    await query(
-      'UPDATE bills SET is_paid = true WHERE bill_id = $1',
-      [billId]
-    );
+    // Mark as paid
+    await this.billRepository.markPaid(billId);
 
-    // Create expense record if requested and category exists
+    // Create expense if requested and category exists
     if (createExpense && bill.category_id) {
-      const expenseService = require('./expenseService');
+      const expenseService = require('./ExpenseService');
       await expenseService.createExpense(userId, {
         categoryId: bill.category_id,
         amount: bill.amount,
@@ -209,9 +156,7 @@ class BillService {
 
     logger.info(`Bill marked as paid: ${billId}`);
 
-    return {
-      message: 'Bill marked as paid successfully',
-    };
+    return { message: 'Bill marked as paid successfully' };
   }
 
   /**
@@ -227,18 +172,15 @@ class BillService {
       nextDueDate.setMonth(dueDate.getMonth() + 1);
     }
 
-    await query(
-      `INSERT INTO bills (user_id, name, amount, due_date, recurrence, is_paid, category_id)
-       VALUES ($1, $2, $3, $4, $5, false, $6)`,
-      [
-        userId,
-        originalBill.name,
-        originalBill.amount,
-        formatDate(nextDueDate),
-        originalBill.recurrence,
-        originalBill.category_id,
-      ]
-    );
+    await this.billRepository.create({
+      user_id: userId,
+      name: originalBill.name,
+      amount: originalBill.amount,
+      due_date: formatDate(nextDueDate),
+      recurrence: originalBill.recurrence,
+      is_paid: false,
+      category_id: originalBill.category_id,
+    });
 
     logger.info(`Recurring bill created: ${originalBill.name}`);
   }
@@ -247,58 +189,28 @@ class BillService {
    * Delete bill
    */
   async deleteBill(billId, userId) {
-    const result = await query(
-      'DELETE FROM bills WHERE bill_id = $1 AND user_id = $2 RETURNING *',
-      [billId, userId]
-    );
+    // Verify ownership
+    await this.getBillById(billId, userId);
 
-    if (result.rows.length === 0) {
-      throw new AppError('Bill not found', 404);
-    }
+    await this.billRepository.delete(billId, 'bill_id');
 
     logger.info(`Bill deleted: ${billId}`);
 
-    return {
-      message: 'Bill deleted successfully',
-    };
+    return { message: 'Bill deleted successfully' };
   }
 
   /**
-   * Get upcoming bills (next 7 days)
+   * Get upcoming bills
    */
-  async getUpcomingBills(userId) {
-    const today = formatDate(new Date());
-    const nextWeek = formatDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-
-    const result = await query(
-      `SELECT * FROM bills 
-       WHERE user_id = $1 
-       AND is_paid = false 
-       AND due_date >= $2 
-       AND due_date <= $3
-       ORDER BY due_date ASC`,
-      [userId, today, nextWeek]
-    );
-
-    return result.rows;
+  async getUpcomingBills(userId, days = 7) {
+    return await this.billRepository.getUpcoming(userId, days);
   }
 
   /**
    * Get overdue bills
    */
   async getOverdueBills(userId) {
-    const today = formatDate(new Date());
-
-    const result = await query(
-      `SELECT * FROM bills 
-       WHERE user_id = $1 
-       AND is_paid = false 
-       AND due_date < $2
-       ORDER BY due_date ASC`,
-      [userId, today]
-    );
-
-    return result.rows;
+    return await this.billRepository.getOverdue(userId);
   }
 }
 
