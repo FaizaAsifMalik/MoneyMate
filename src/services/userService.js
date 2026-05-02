@@ -23,6 +23,13 @@ class UserService {
   async updateCurrency(userId, currency) {
     return this.updateProfile(userId, { currency });
   }
+
+  async updateProfilePicture(userId, imageUrl) {
+    const updated = await this.userRepo.update(userId, { profilePicture: imageUrl });
+    if (!updated) throw new AppError('User not found', 404);
+    const { passwordhash, ...safe } = updated;
+    return safe;
+  }
 }
 
 module.exports = new UserService();

@@ -3,10 +3,10 @@ require('dotenv').config(); // MUST BE FIRST LINE
 const app = require('./src/app');
 const { config } = require('./src/config/env');
 const logger = require('./src/utils/logger');
-const { initializeJobs } = require('./src/jobs');
+const { startJobs } = require('./src/jobs');
 const { pool } = require('./src/config/database');
 
-const PORT = config.port;
+const PORT = config.server.port;
 
 async function startServer() {
   try {
@@ -15,7 +15,7 @@ async function startServer() {
     client.release();
     logger.info('Database connection established successfully');
 
-    initializeJobs();
+    startJobs();
     logger.info(' Scheduled jobs initialized');
 
     app.listen(PORT, () => {

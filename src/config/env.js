@@ -21,7 +21,7 @@ const config = {
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT) || 587,
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASSWORD,
     from: process.env.EMAIL_FROM,
   },
   currencyApi: {
@@ -32,6 +32,8 @@ const config = {
     apiKey: process.env.AI_API_KEY || '',
     model: process.env.AI_MODEL || 'claude-3-haiku-20240307',
   },
+  port: parseInt(process.env.PORT) || 3000,
+  nodeEnv: process.env.NODE_ENV || 'development',
 };
 
 module.exports = { config };

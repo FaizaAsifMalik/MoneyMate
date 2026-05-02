@@ -28,6 +28,17 @@ class UserController {
       return error(res, err.message, err.statusCode || 500);
     }
   }
+
+  async updateProfilePicture(req, res) {
+    try {
+      if (!req.file) throw new AppError('No image file provided', 400);
+      const imageUrl = `/uploads/profiles/${req.file.filename}`;
+      const user = await userService.updateProfilePicture(req.user.id, imageUrl);
+      return success(res, user, 'Profile picture updated');
+    } catch (err) {
+      return error(res, err.message, err.statusCode || 500);
+    }
+  }
 }
 
 module.exports = new UserController();
