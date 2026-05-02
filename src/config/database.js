@@ -2,52 +2,34 @@ const { Pool } = require('pg');
 const { config } = require('./env');
 const logger = require('../utils/logger');
 
-// Create a connection pool
-const pool = new Pool(config.database);
-
-// Pool error handler
-pool.on('error', (err) => {
-  logger.error('Unexpected error on idle client', err);
-  process.exit(-1);
+const pool = new Pool({
+  host: config.db.host,
+  port: config.db.port,
+  database: config.db.name,
+  user: config.db.user,
+  password: config.db.password,
+  ssl: config.db.ssl ? { rejectUnauthorized: false } : false,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
-// Pool connection handler
-pool.on('connect', () => {
-  logger.info('Database pool connection established');
-});
+pool.on('connect', () => logger.info('New database connection established'));
+pool.on('error', (err) => logger.error('Database pool error:', err));
 
-// Query helper function
 const query = async (text, params) => {
   const start = Date.now();
   try {
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
-    logger.debug('Executed query', { text, duration, rows: result.rowCount });
+    logger.debug(`Query executed in ${duration}ms: ${text.substring(0, 80)}`);
     return result;
   } catch (error) {
-    logger.error('Database query error:', { text, error: error.message });
+    logger.error('Query error:', { text, error: error.message });
     throw error;
   }
 };
 
-// Transaction helper
-const transaction = async (callback) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await callback(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
+const getClient = () => pool.connect();
 
-module.exports = {
-  pool,
-  query,
-  transaction,
-};
+module.exports = { query, getClient, pool };
