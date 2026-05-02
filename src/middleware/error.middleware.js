@@ -1,36 +1,12 @@
 const logger = require('../utils/logger');
-const { formatErrorResponse } = require('../utils/responseFormatter');
 
-/**
- * Global error handling middleware
- */
-const errorHandler = (err, req, res, next) => {
-  // Log error
-  logger.error('Error occurred:', {
-    message: err.message,
-    stack: err.stack,
-    url: req.originalUrl,
-    method: req.method,
-  });
+const errorMiddleware = (err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const message = err.isOperational ? err.message : 'Internal server error';
 
-  // Set default values
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+  if (statusCode === 500) logger.error(err);
 
-  // Send error response
-  res.status(err.statusCode).json(formatErrorResponse(err));
+  res.status(statusCode).json({ success: false, message });
 };
 
-/**
- * Handle 404 routes
- */
-const notFound = (req, res, next) => {
-  const error = new Error(`Route not found: ${req.originalUrl}`);
-  error.statusCode = 404;
-  next(error);
-};
-
-module.exports = {
-  errorHandler,
-  notFound,
-};
+module.exports = { errorMiddleware };

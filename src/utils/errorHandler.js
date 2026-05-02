@@ -1,28 +1,26 @@
-/**
- * Custom Application Error class
- */
 class AppError extends Error {
-  constructor(message, statusCode = 500, details = null) {
+  constructor(message, statusCode = 500) {
     super(message);
     this.statusCode = statusCode;
-    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
     this.isOperational = true;
-    this.details = details;
-
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
-/**
- * Async error handler wrapper
- */
-const catchAsync = (fn) => {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-};
+class NotFoundError extends AppError {
+  constructor(message = 'Resource not found') { super(message, 404); }
+}
 
-module.exports = {
-  AppError,
-  catchAsync,
-};
+class UnauthorizedError extends AppError {
+  constructor(message = 'Unauthorized') { super(message, 401); }
+}
+
+class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden') { super(message, 403); }
+}
+
+class ValidationError extends AppError {
+  constructor(message = 'Validation failed') { super(message, 422); }
+}
+
+module.exports = { AppError, NotFoundError, UnauthorizedError, ForbiddenError, ValidationError };

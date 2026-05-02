@@ -1,69 +1,20 @@
 const { verifyToken } = require('../config/jwt');
-const { AppError } = require('../utils/errorHandler');
-const logger = require('../utils/logger');
+const { unauthorized } = require('../utils/responseFormatter');
 
-/**
- * Authenticate user from JWT token
- */
-const authenticate = async (req, res, next) => {
+const authMiddleware = (req, res, next) => {
   try {
-    // Get token from header
     const authHeader = req.headers.authorization;
-    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError('No token provided', 401);
+      return unauthorized(res, 'No token provided');
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    // Verify token
+    const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
-    
-    // Attach user info to request
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      name: decoded.name,
-    };
-
+    req.user = decoded;
     next();
   } catch (error) {
-    logger.error('Authentication error:', error.message);
-    if (error.name === 'JsonWebTokenError') {
-      return next(new AppError('Invalid token', 401));
-    }
-    if (error.name === 'TokenExpiredError') {
-      return next(new AppError('Token expired', 401));
-    }
-    next(error);
+    return unauthorized(res, 'Invalid or expired token');
   }
 };
 
-/**
- * Optional authentication - doesn't fail if no token
- */
-const optionalAuth = async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const decoded = verifyToken(token);
-      req.user = {
-        id: decoded.id,
-        email: decoded.email,
-        name: decoded.name,
-      };
-    }
-    
-    next();
-  } catch (error) {
-    // Continue without authentication
-    next();
-  }
-};
-
-module.exports = {
-  authenticate,
-  optionalAuth,
-};
+module.exports = { authMiddleware };

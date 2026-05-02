@@ -1,110 +1,46 @@
-const bcrypt = require('bcryptjs');
-
-/**
- * Hash password
- */
-const hashPassword = async (password) => {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(password, salt);
+const getStartOfMonth = (date = new Date()) => {
+  return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
 };
 
-/**
- * Compare password with hash
- */
-const comparePassword = async (password, hash) => {
-  return bcrypt.compare(password, hash);
+const getEndOfMonth = (date = new Date()) => {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
 };
 
-/**
- * Generate random OTP
- */
-const generateOTP = (length = 6) => {
-  const digits = '0123456789';
-  let otp = '';
-  for (let i = 0; i < length; i++) {
-    otp += digits[Math.floor(Math.random() * 10)];
+const getNextDueDate = (dayOfMonth, frequency = 'monthly') => {
+  const now = new Date();
+  let next = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+  if (next <= now) {
+    if (frequency === 'monthly') {
+      next = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
+    } else if (frequency === 'yearly') {
+      next = new Date(now.getFullYear() + 1, now.getMonth(), dayOfMonth);
+    }
   }
-  return otp;
+  return next.toISOString().split('T')[0];
 };
 
-/**
- * Format currency
- */
-const formatCurrency = (amount, currency = 'USD') => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(amount);
+const parseInputDate = (dateStr) => {
+  if (!dateStr) return null;
+  const parts = dateStr.split('-');
+  // MM-DD-YYYY from frontend
+  if (parts[2]?.length === 4) {
+    const [month, day, year] = parts;
+    return new Date(`${year}-${month}-${day}`);
+  }
+  // Already YYYY-MM-DD or ISO
+  return new Date(dateStr);
 };
 
-/**
- * Calculate percentage
- */
-const calculatePercentage = (part, total) => {
-  if (total === 0) return 0;
-  return ((part / total) * 100).toFixed(2);
-};
-
-/**
- * Format date to YYYY-MM-DD
- */
 const formatDate = (date) => {
   if (!date) return null;
-  const d = new Date(date);
+  const d = typeof date === 'string' ? parseInputDate(date) : new Date(date);
+  if (isNaN(d.getTime())) return null;
   return d.toISOString().split('T')[0];
 };
 
-/**
- * Get date range for period
- */
-const getDateRange = (period) => {
-  const endDate = new Date();
-  const startDate = new Date();
+const paginate = (page = 1, limit = 20) => ({
+  limit: parseInt(limit),
+  offset: (parseInt(page) - 1) * parseInt(limit),
+});
 
-  switch (period) {
-    case 'weekly':
-      startDate.setDate(endDate.getDate() - 7);
-      break;
-    case 'monthly':
-      startDate.setMonth(endDate.getMonth() - 1);
-      break;
-    case 'yearly':
-      startDate.setFullYear(endDate.getFullYear() - 1);
-      break;
-    default:
-      startDate.setMonth(endDate.getMonth() - 1);
-  }
-
-  return {
-    startDate: formatDate(startDate),
-    endDate: formatDate(endDate),
-  };
-};
-
-/**
- * Validate email format
- */
-const isValidEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-/**
- * Sanitize user input
- */
-const sanitizeInput = (input) => {
-  if (typeof input !== 'string') return input;
-  return input.trim().replace(/[<>]/g, '');
-};
-
-module.exports = {
-  hashPassword,
-  comparePassword,
-  generateOTP,
-  formatCurrency,
-  calculatePercentage,
-  formatDate,
-  getDateRange,
-  isValidEmail,
-  sanitizeInput,
-};
+module.exports = { getStartOfMonth, getEndOfMonth, getNextDueDate, parseInputDate, formatDate, paginate };

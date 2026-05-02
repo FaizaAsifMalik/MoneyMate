@@ -1,57 +1,31 @@
-require('./observers/EventEmitter')
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
+const { errorMiddleware } = require('./middleware/error.middleware');
+const { rateLimiter } = require('./middleware/rateLimiter.middleware');
 const routes = require('./routes');
-const { errorHandler, notFound } = require('./middleware/error.middleware');
-const { apiLimiter } = require('./middleware/rateLimiter.middleware');
 const logger = require('./utils/logger');
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(rateLimiter);
 
-// CORS configuration
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true,
-  })
-);
-
-// Body parser middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// HTTP request logger
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
-
-// Rate limiting
-app.use('/api', apiLimiter);
-
-// Welcome route
-app.get('/', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Welcome to MoneyMate API',
-    version: '1.0.0',
-    documentation: '/api/health',
-  });
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ success: true, message: 'MoneyMate API is running', timestamp: new Date() });
 });
 
-// API routes
+// API Routes
 app.use('/api', routes);
 
 // 404 handler
-app.use(notFound);
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
+});
 
-// Global error handler
-app.use(errorHandler);
+// Error handler
+app.use(errorMiddleware);
 
 module.exports = app;

@@ -1,36 +1,14 @@
-const express = require('express');
-const authRoutes = require('./auth.routes');
-const userRoutes = require('./user.routes');
-const categoryRoutes = require('./category.routes');
-const incomeRoutes = require('./income.routes');
-const expenseRoutes = require('./expense.routes');
-const budgetRoutes = require('./budget.routes');
-const goalRoutes = require('./goal.routes');
-const billRoutes = require('./bill.routes');
-const notificationRoutes = require('./notification.routes');
-const aiRoutes = require('./ai.routes');
+const router = require('express').Router();
 
-const router = express.Router();
-
-// Health check route
-router.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'MoneyMate API is running',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Mount routes
-router.use('/auth', authRoutes);
-router.use('/users', userRoutes);
-router.use('/categories', categoryRoutes);
-router.use('/income', incomeRoutes);
-router.use('/expenses', expenseRoutes);
-router.use('/budgets', budgetRoutes);
-router.use('/goals', goalRoutes);
-router.use('/bills', billRoutes);
-router.use('/notifications', notificationRoutes);
-router.use('/ai', aiRoutes);
+router.use('/auth', require('./auth.routes'));
+router.use('/users', require('./user.routes'));
+router.use('/categories', require('./category.routes'));
+router.use('/expenses', require('./expense.routes'));
+router.use('/incomes', require('./income.routes'));
+router.use('/budgets', require('./budget.routes'));
+router.use('/goals', require('./goal.routes'));
+router.use('/bills', require('./bill.routes'));
+router.use('/notifications', require('./notification.routes'));
+router.use('/ai', require('./ai.routes'));
 
 module.exports = router;

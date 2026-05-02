@@ -1,53 +1,31 @@
-/**
- * Format success response
- */
-const formatSuccessResponse = (data, message = 'Success') => {
-  return {
-    success: true,
-    message,
-    data,
-  };
+const success = (res, data, message = 'Success', statusCode = 200) => {
+  return res.status(statusCode).json({ success: true, message, data });
 };
 
-/**
- * Format error response
- */
-const formatErrorResponse = (error) => {
-  const response = {
-    success: false,
-    message: error.message || 'An error occurred',
-  };
-
-  if (error.details) {
-    response.details = error.details;
-  }
-
-  // Include stack trace in development
-  if (process.env.NODE_ENV === 'development' && error.stack) {
-    response.stack = error.stack;
-  }
-
-  return response;
+const error = (res, message = 'An error occurred', statusCode = 500, details = null) => {
+  const response = { success: false, message };
+  if (details) response.details = details;
+  return res.status(statusCode).json(response);
 };
 
-/**
- * Format paginated response
- */
-const formatPaginatedResponse = (data, page, limit, total) => {
-  return {
-    success: true,
-    data,
-    pagination: {
-      currentPage: page,
-      limit,
-      totalItems: total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
+const created = (res, data, message = 'Created successfully') => {
+  return success(res, data, message, 201);
 };
 
-module.exports = {
-  formatSuccessResponse,
-  formatErrorResponse,
-  formatPaginatedResponse,
+const notFound = (res, message = 'Not found') => {
+  return error(res, message, 404);
 };
+
+const unauthorized = (res, message = 'Unauthorized') => {
+  return error(res, message, 401);
+};
+
+const forbidden = (res, message = 'Forbidden') => {
+  return error(res, message, 403);
+};
+
+const validationError = (res, details) => {
+  return error(res, 'Validation failed', 422, details);
+};
+
+module.exports = { success, error, created, notFound, unauthorized, forbidden, validationError };
