@@ -1,101 +1,87 @@
 const BaseRepository = require('./BaseRepository');
-const { query } = require('../config/database');
 
-/**
- * Expense Repository
- */
 class ExpenseRepository extends BaseRepository {
   constructor() {
-    super('expense');
+    super('expenses', 'expense_id');
   }
 
-  /**
-   * Find expenses with category details
-   */
-  async findWithCategory(userId, filters = {}) {
-    const { startDate, endDate, categoryId, limit = 50, offset = 0 } = filters;
-    
-    let queryText = `
-      SELECT e.*, c.name as category_name, c.icon, c.colour
-      FROM expense e
-      LEFT JOIN category c ON e.category_id = c.category_id
+  async findByUserId(userId, filters = {}) {
+    let sql = `
+      SELECT e.*, c.name as category_name, c.icon as category_icon, c.colour as category_colour
+      FROM expenses e
+      LEFT JOIN categories c ON e.category_id = c.category_id
       WHERE e.user_id = $1
     `;
-    const values = [userId];
-    let paramCount = 2;
+    const params = [userId];
+    let i = 2;
 
-    if (startDate) {
-      queryText += ` AND e.date >= $${paramCount++}`;
-      values.push(startDate);
-    }
+    if (filters.startDate) { sql += ` AND e.date >= $${i++}`; params.push(filters.startDate); }
+    if (filters.endDate) { sql += ` AND e.date <= $${i++}`; params.push(filters.endDate); }
+    if (filters.categoryId) { sql += ` AND e.category_id = $${i++}`; params.push(filters.categoryId); }
 
-    if (endDate) {
-      queryText += ` AND e.date <= $${paramCount++}`;
-      values.push(endDate);
-    }
+    sql += ' ORDER BY e.date DESC';
 
-    if (categoryId) {
-      queryText += ` AND e.category_id = $${paramCount++}`;
-      values.push(categoryId);
-    }
+    if (filters.limit) { sql += ` LIMIT $${i++}`; params.push(filters.limit); }
+    if (filters.offset) { sql += ` OFFSET $${i++}`; params.push(filters.offset); }
 
-    queryText += ` ORDER BY e.date DESC LIMIT $${paramCount++} OFFSET $${paramCount}`;
-    values.push(limit, offset);
-
-    const result = await query(queryText, values);
+    const result = await this.query(sql, params);
     return result.rows;
   }
 
-  /**
-   * Get expenses by date range
-   */
-  async findByDateRange(userId, startDate, endDate) {
-    const result = await query(
-      `SELECT * FROM expense 
-       WHERE user_id = $1 AND date >= $2 AND date <= $3
-       ORDER BY date DESC`,
-      [userId, startDate, endDate]
-    );
-    return result.rows;
-  }
-
-  /**
-   * Get total by category
-   */
-  async getTotalByCategory(userId, categoryId, startDate, endDate) {
-    const result = await query(
-      `SELECT COALESCE(SUM(amount), 0) as total
-       FROM expense
-       WHERE user_id = $1 AND category_id = $2 AND date >= $3 AND date <= $4`,
-      [userId, categoryId, startDate, endDate]
-    );
-    return parseFloat(result.rows[0].total);
-  }
-
-  /**
-   * Get summary by category
-   */
   async getSummaryByCategory(userId, startDate, endDate) {
-    const result = await query(
-      `SELECT 
-        c.category_id,
-        c.name as category_name,
-        c.icon,
-        c.colour,
-        COALESCE(SUM(e.amount), 0) as total,
-        COUNT(e.expense_id) as count
-       FROM category c
-       LEFT JOIN expense e ON c.category_id = e.category_id 
-         AND e.user_id = $1 
-         AND e.date >= $2 
-         AND e.date <= $3
-       WHERE c.user_id = $1 AND c.type = 'expense'
+    const result = await this.query(
+      `SELECT c.category_id, c.name, c.icon, c.colour,
+              SUM(e.amount) as total, COUNT(*) as count
+       FROM expenses e
+       JOIN categories c ON e.category_id = c.category_id
+       WHERE e.user_id = $1 AND e.date BETWEEN $2 AND $3
        GROUP BY c.category_id, c.name, c.icon, c.colour
        ORDER BY total DESC`,
       [userId, startDate, endDate]
     );
     return result.rows;
   }
+
+  async getMonthlyTotals(userId, months = 6) {
+    const result = await this.query(
+      `SELECT DATE_TRUNC('month', date) as month, SUM(amount) as total
+       FROM expenses
+       WHERE user_id = $1 AND date >= NOW() - INTERVAL '${months} months'
+       GROUP BY DATE_TRUNC('month', date)
+       ORDER BY month DESC`,
+      [userId]
+    );
+    return result.rows;
+  }
+
+  async create(data) {
+    const result = await this.query(
+      `INSERT INTO expenses (user_id, category_id, amount, date, description, bill_id)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [data.userId, data.categoryId, data.amount, data.date, data.description || '', data.billId || null]
+    );
+    return result.rows[0];
+  }
+
+  async update(id, data) {
+    const fields = [];
+    const values = [];
+    let i = 1;
+
+    if (data.amount !== undefined) { fields.push(`amount = $${i++}`); values.push(data.amount); }
+    if (data.categoryId !== undefined) { fields.push(`category_id = $${i++}`); values.push(data.categoryId); }
+    if (data.date !== undefined) { fields.push(`date = $${i++}`); values.push(data.date); }
+    if (data.description !== undefined) { fields.push(`description = $${i++}`); values.push(data.description); }
+
+    if (fields.length === 0) return null;
+    values.push(id);
+
+    const result = await this.query(
+      `UPDATE expenses SET ${fields.join(', ')} WHERE expense_id = $${i} RETURNING *`,
+      values
+    );
+    return result.rows[0] || null;
+  }
 }
 
-module.exports = new ExpenseRepository();
+module.exports = ExpenseRepository;

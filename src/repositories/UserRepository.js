@@ -1,60 +1,44 @@
 const BaseRepository = require('./BaseRepository');
-const { query } = require('../config/database');
 
-/**
- * User Repository - Extends BaseRepository
- * Implements specific user-related data access
- */
 class UserRepository extends BaseRepository {
   constructor() {
-    super('users');
+    super('users', 'id');
   }
 
-  /**
-   * Find user by email
-   */
   async findByEmail(email) {
-    return await this.findOne({ email });
-  }
-
-  /**
-   * Check if email exists
-   */
-  async emailExists(email) {
-    const result = await query(
-      'SELECT EXISTS(SELECT 1 FROM users WHERE email = $1) as exists',
-      [email]
-    );
-    return result.rows[0].exists;
-  }
-
-  /**
-   * Get user with statistics
-   */
-  async getUserWithStats(userId) {
-    const result = await query(
-      `SELECT 
-        u.*,
-        (SELECT COUNT(*) FROM income WHERE user_id = u.id) as income_count,
-        (SELECT COUNT(*) FROM expense WHERE user_id = u.id) as expense_count,
-        (SELECT COUNT(*) FROM budget WHERE user_id = u.id) as budget_count,
-        (SELECT COUNT(*) FROM goal WHERE user_id = u.id) as goal_count
-       FROM users u
-       WHERE u.id = $1`,
-      [userId]
-    );
+    const result = await this.query('SELECT * FROM users WHERE email = $1', [email]);
     return result.rows[0] || null;
   }
 
-  /**
-   * Update last login
-   */
-  async updateLastLogin(userId) {
-    await query(
-      'UPDATE users SET last_login = NOW() WHERE id = $1',
-      [userId]
+  async create(data) {
+    const result = await this.query(
+      `INSERT INTO users (name, email, passwordhash, currency)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [data.name, data.email, data.passwordHash, data.currency || 'USD']
     );
+    return result.rows[0];
+  }
+
+  async update(id, data) {
+    const fields = [];
+    const values = [];
+    let i = 1;
+
+    if (data.name !== undefined) { fields.push(`name = $${i++}`); values.push(data.name); }
+    if (data.email !== undefined) { fields.push(`email = $${i++}`); values.push(data.email); }
+    if (data.currency !== undefined) { fields.push(`currency = $${i++}`); values.push(data.currency); }
+    if (data.passwordHash !== undefined) { fields.push(`passwordhash = $${i++}`); values.push(data.passwordHash); }
+
+    if (fields.length === 0) return null;
+    values.push(id);
+
+    const result = await this.query(
+      `UPDATE users SET ${fields.join(', ')}, updatedat = NOW() WHERE id = $${i} RETURNING *`,
+      values
+    );
+    return result.rows[0] || null;
   }
 }
 
-module.exports = new UserRepository();
+module.exports = UserRepository;

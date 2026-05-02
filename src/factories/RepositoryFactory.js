@@ -1,40 +1,25 @@
-const UserRepository = require('../repositories/UserRepository');
-const ExpenseRepository = require('../repositories/ExpenseRepository');
-const IncomeRepository = require('../repositories/IncomeRepository');
-const CategoryRepository = require('../repositories/CategoryRepository');
-const BudgetRepository = require('../repositories/BudgetRepository');
+const repos = require('../repositories');
 
-/**
- * Repository Factory
- * Implements Factory Pattern
- */
 class RepositoryFactory {
-  static create(repositoryType) {
-    switch (repositoryType) {
-      case 'user':
-        return UserRepository;
-      case 'expense':
-        return ExpenseRepository;
-      case 'income':
-        return IncomeRepository;
-      case 'category':
-        return CategoryRepository;
-      case 'budget':
-        return BudgetRepository;
-      default:
-        throw new Error(`Unknown repository type: ${repositoryType}`);
+  static _instances = {};
+
+  static getRepository(name) {
+    if (!this._instances[name]) {
+      const RepoClass = repos[name];
+      if (!RepoClass) throw new Error(`Repository ${name} not found`);
+      this._instances[name] = new RepoClass();
     }
+    return this._instances[name];
   }
 
-  static createAll() {
-    return {
-      user: UserRepository,
-      expense: ExpenseRepository,
-      income: IncomeRepository,
-      category: CategoryRepository,
-      budget: BudgetRepository,
-    };
-  }
+  static getUserRepository() { return this.getRepository('UserRepository'); }
+  static getCategoryRepository() { return this.getRepository('CategoryRepository'); }
+  static getIncomeRepository() { return this.getRepository('IncomeRepository'); }
+  static getExpenseRepository() { return this.getRepository('ExpenseRepository'); }
+  static getBudgetRepository() { return this.getRepository('BudgetRepository'); }
+  static getGoalRepository() { return this.getRepository('GoalRepository'); }
+  static getBillRepository() { return this.getRepository('BillRepository'); }
+  static getNotificationRepository() { return this.getRepository('NotificationRepository'); }
 }
 
 module.exports = RepositoryFactory;
