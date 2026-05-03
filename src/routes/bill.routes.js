@@ -3,8 +3,11 @@ const BillController = require('../controllers/BillController');
 const { authMiddleware } = require('../middleware/auth.middleware');
 
 router.use(authMiddleware);
+
 router.get('/', BillController.getAll.bind(BillController));
 router.get('/upcoming', BillController.getUpcoming.bind(BillController));
+router.get('/overdue', BillController.getOverdue.bind(BillController));
+router.get('/:id', BillController.getById.bind(BillController));
 router.post('/', BillController.create.bind(BillController));
 router.put('/:id', BillController.update.bind(BillController));
 router.patch('/:id/pay', BillController.markAsPaid.bind(BillController));
