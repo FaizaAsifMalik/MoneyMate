@@ -16,7 +16,7 @@ app.use(rateLimiter);
 app.get('/health', (req, res) => {
   res.json({ success: true, message: 'MoneyMate API is running', timestamp: new Date() });
 });
-
+app.set('trust proxy', 1);
 // API Routes
 app.use('/api', routes);
 

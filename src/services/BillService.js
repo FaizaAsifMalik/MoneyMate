@@ -1,20 +1,13 @@
-const BillRepository = require('../repositories/BillRepository');
-const CategoryRepository = require('../repositories/CategoryRepository');
+const RepositoryFactory = require('../factories/RepositoryFactory');
 const { AppError } = require('../utils/errorHandler');
 const logger = require('../utils/logger');
 
 class BillService {
-  constructor(
-    billRepository = BillRepository,
-    categoryRepository = CategoryRepository
-  ) {
-    this.billRepository = billRepository;
-    this.categoryRepository = categoryRepository;
+  constructor() {
+    this.billRepository = RepositoryFactory.getBillRepository();
+    this.categoryRepository = RepositoryFactory.getCategoryRepository();
   }
 
-  /**
-   * Get all bills
-   */
   async getBills(userId, filters = {}) {
     const bills = await this.billRepository.findWithCategory(userId, filters);
 
@@ -33,42 +26,31 @@ class BillService {
     });
   }
 
-  /**
-   * Get bill by ID
-   */
   async getBillById(billId, userId) {
     const bill = await this.billRepository.findById(billId);
-
     if (!bill || bill.user_id !== userId) {
       throw new AppError('Bill not found', 404);
     }
-
     return bill;
   }
 
-  /**
-   * Create bill
-   */
   async createBill(userId, billData) {
     const {
       name,
       amount,
-      dueDate,        // day of month 1-31
+      dueDate,
       frequency = 'monthly',
       categoryId = null,
     } = billData;
 
-    // Validate dueDate is between 1-31
     if (!dueDate || dueDate < 1 || dueDate > 31) {
       throw new AppError('Due date must be a day of month between 1 and 31', 400);
     }
 
-    // Validate frequency
     if (!['monthly', 'yearly'].includes(frequency)) {
       throw new AppError('Frequency must be monthly or yearly', 400);
     }
 
-    // Validate category if provided
     if (categoryId) {
       const category = await this.categoryRepository.findOne({
         category_id: categoryId,
@@ -79,39 +61,30 @@ class BillService {
       }
     }
 
-    // Calculate next due date
     const nextDueDate = this._calculateNextDueDate(dueDate, frequency);
 
     const bill = await this.billRepository.create({
       user_id: userId,
       name,
       amount,
-      due_date: dueDate,           // INTEGER day of month
-      frequency,                    // 'monthly' or 'yearly'
+      due_date: dueDate,
+      frequency,
       category_id: categoryId,
       is_paid: false,
-      next_due_date: nextDueDate,  // actual DATE
+      next_due_date: nextDueDate,
     });
 
     logger.info(`Bill created for user ${userId}: ${name}`);
     return bill;
   }
 
-  /**
-   * Update bill
-   */
   async updateBill(billId, userId, updateData) {
     await this.getBillById(billId, userId);
 
     const updateFields = {};
 
-    if (updateData.name !== undefined) {
-      updateFields.name = updateData.name;
-    }
-
-    if (updateData.amount !== undefined) {
-      updateFields.amount = updateData.amount;
-    }
+    if (updateData.name !== undefined) updateFields.name = updateData.name;
+    if (updateData.amount !== undefined) updateFields.amount = updateData.amount;
 
     if (updateData.dueDate !== undefined) {
       if (updateData.dueDate < 1 || updateData.dueDate > 31) {
@@ -140,11 +113,8 @@ class BillService {
       updateFields.category_id = updateData.categoryId;
     }
 
-    if (updateData.isPaid !== undefined) {
-      updateFields.is_paid = updateData.isPaid;
-    }
+    if (updateData.isPaid !== undefined) updateFields.is_paid = updateData.isPaid;
 
-    // Recalculate next due date if dueDate or frequency changed
     if (updateData.dueDate || updateData.frequency) {
       const bill = await this.getBillById(billId, userId);
       const dueDay = updateData.dueDate || bill.due_date;
@@ -157,9 +127,6 @@ class BillService {
     return bill;
   }
 
-  /**
-   * Mark bill as paid
-   */
   async markAsPaid(billId, userId) {
     const bill = await this.getBillById(billId, userId);
 
@@ -167,19 +134,19 @@ class BillService {
       throw new AppError('Bill is already marked as paid', 400);
     }
 
-    // Mark as paid and calculate next due date
     const nextDueDate = this._calculateNextDueDate(bill.due_date, bill.frequency);
     await this.billRepository.markPaid(billId, nextDueDate);
 
-    // Create expense if category exists
+    // Use expenseRepo directly to avoid circular dependency with ExpenseService
     if (bill.category_id) {
-      const expenseService = require('./ExpenseService');
-      await expenseService.createExpense(userId, {
-        categoryId: bill.category_id,
+      const expenseRepo = RepositoryFactory.getExpenseRepository();
+      await expenseRepo.create({
+        user_id: userId,
+        category_id: bill.category_id,
         amount: bill.amount,
         date: new Date().toISOString().split('T')[0],
         description: `Payment for ${bill.name}`,
-        billId: billId,
+        bill_id: billId,
       });
     }
 
@@ -187,9 +154,6 @@ class BillService {
     return { message: 'Bill marked as paid successfully' };
   }
 
-  /**
-   * Delete bill
-   */
   async deleteBill(billId, userId) {
     await this.getBillById(billId, userId);
     await this.billRepository.delete(billId);
@@ -197,28 +161,18 @@ class BillService {
     return { message: 'Bill deleted successfully' };
   }
 
-  /**
-   * Get upcoming bills
-   */
   async getUpcomingBills(userId, days = 7) {
     return await this.billRepository.getUpcoming(userId, days);
   }
 
-  /**
-   * Get overdue bills
-   */
   async getOverdueBills(userId) {
     return await this.billRepository.getOverdue(userId);
   }
 
-  /**
-   * Calculate next due date from day of month
-   */
   _calculateNextDueDate(dayOfMonth, frequency) {
     const now = new Date();
     let next = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
 
-    // If that day already passed this month
     if (next <= now) {
       if (frequency === 'monthly') {
         next = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);

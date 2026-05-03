@@ -1,4 +1,4 @@
-require('dotenv').config(); // MUST BE FIRST LINE
+require('dotenv').config();
 
 const app = require('./src/app');
 const { config } = require('./src/config/env');
@@ -6,7 +6,7 @@ const logger = require('./src/utils/logger');
 const { startJobs } = require('./src/jobs');
 const { pool } = require('./src/config/database');
 
-const PORT = config.server.port;
+const PORT = config.port;
 
 async function startServer() {
   try {
@@ -16,15 +16,15 @@ async function startServer() {
     logger.info('Database connection established successfully');
 
     startJobs();
-    logger.info(' Scheduled jobs initialized');
+    logger.info('Scheduled jobs initialized');
 
     app.listen(PORT, () => {
-      logger.info(` MoneyMate server running on port ${PORT}`);
-      logger.info(` Environment: ${config.nodeEnv}`);
-      logger.info(` API URL: http://localhost:${PORT}/api`);
+      logger.info(`MoneyMate server running on port ${PORT}`);
+      logger.info(`Environment: ${config.nodeEnv}`);
+      logger.info(`API URL: http://localhost:${PORT}/api`);
     });
   } catch (error) {
-    logger.error(' Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
