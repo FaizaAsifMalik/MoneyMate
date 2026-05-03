@@ -30,6 +30,18 @@ class CategoryRepository extends BaseRepository {
     return result.rows[0];
   }
 
+  // Add this method to CategoryRepository.js
+async findOne(conditions) {
+  const fields = Object.keys(conditions);
+  const values = Object.values(conditions);
+  const where = fields.map((f, i) => `${f} = $${i + 1}`).join(' AND ');
+  const result = await this.query(
+    `SELECT * FROM categories WHERE ${where} LIMIT 1`,
+    values
+  );
+  return result.rows[0] || null;
+}
+
   async update(id, data) {
     const fields = [];
     const values = [];
