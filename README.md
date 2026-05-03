@@ -77,7 +77,7 @@ MoneyMate/
 - Node.js 20+
 - npm
 - PostgreSQL database
-- Gemini API key (for AI insights)
+- Claude API key (for AI insights)
 
 ## Setup
 
