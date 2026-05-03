@@ -35,22 +35,16 @@ Zara Usman, Fatima Qadeer, Faiza Asif
 ## Repository Structure
 
 ```
-.
-├── lib/
-│   ├── models/             # Dart data models (ExpenseModel, CategoryModel, Bill)
-│   ├── screens/            # UI screens (expense, bill, AI insights, settings)
-│   ├── services/           # API service layer (ExpenseService, BillService, AIService)
-│   ├── widgets/            # Shared UI components
-│   └── theme/              # App colors and theme
-├── backend/
-│   ├── controllers/        # Route handlers (BillController, ExpenseController)
-│   ├── services/           # Business logic (BillService, ExpenseService, AIService)
-│   ├── repositories/       # Database access layer
-│   ├── routes/             # Express route definitions
-│   ├── models/             # Domain models (Bill, Expense, Category)
-│   └── server.ts           # Express entry point
-├── pubspec.yaml            # Flutter dependencies
-└── README.md
+MoneyMate/
+├── server.js
+├── package.json
+├── vercel.json
+├── .env.example
+├── .gitignore
+├── database.sql
+├── README.md
+├── src/
+└── frontend/
 ```
 
 ## Design Patterns Implemented
