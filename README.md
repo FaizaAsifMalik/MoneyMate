@@ -38,9 +38,9 @@ Zara Usman, Fatima Qadeer, Faiza Asif
 MoneyMate/
 ├── server.js
 ├── package.json
-├── vercel.json
-├── .env.example
-├── .gitignore
+├── package-lock.json
+├── .env
+├── Database/Information
 ├── database.sql
 ├── README.md
 ├── src/
