@@ -30,6 +30,13 @@ class UserService {
     const { passwordhash, ...safe } = updated;
     return safe;
   }
+
+  async deleteAccount(userId) {
+    const user = await this.userRepo.findById(userId);
+    if (!user) throw new AppError('User not found', 404);
+    await this.userRepo.delete(userId);
+    return { message: 'Account deleted successfully' };
+  }
 }
 
 module.exports = new UserService();

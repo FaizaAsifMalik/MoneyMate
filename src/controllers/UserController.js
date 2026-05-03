@@ -1,4 +1,5 @@
 const userService = require('../services/UserService');
+const { AppError } = require('../utils/errorHandler');
 const { success, error } = require('../utils/responseFormatter');
 
 class UserController {
@@ -35,6 +36,15 @@ class UserController {
       const imageUrl = `/uploads/profiles/${req.file.filename}`;
       const user = await userService.updateProfilePicture(req.user.id, imageUrl);
       return success(res, user, 'Profile picture updated');
+    } catch (err) {
+      return error(res, err.message, err.statusCode || 500);
+    }
+  }
+
+  async deleteAccount(req, res) {
+    try {
+      const result = await userService.deleteAccount(req.user.id);
+      return success(res, result, 'Account deleted successfully');
     } catch (err) {
       return error(res, err.message, err.statusCode || 500);
     }
